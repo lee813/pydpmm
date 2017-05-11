@@ -7,10 +7,10 @@ from numpy.random import random
 
 # fix var = 1
 class dpmm_gibbs(object):
-    def __init__(self, alpha_0=None, x=[]):
+    def __init__(self, alpha_0=None, init_K=5, x=[]):
         self.alpha_0 = alpha_0
         self.x = x
-        self.K = 5
+        self.K = init_K
 
         self.mu_0 = 1
         self.mu = np.ones(self.K)
@@ -42,6 +42,10 @@ class dpmm_gibbs(object):
         for idx,c in enumerate(self.components):
             if(len(c.ss) == 0):
                 delete_idx.append(idx)
+                print('remove component')
+
+        for c in self.components:
+            c.ss = []
 
         self.components = np.delete(self.components,delete_idx)
         self.K = len(self.components)
@@ -68,11 +72,11 @@ class dpmm_gibbs(object):
 
             normailizedAllPropotion = all_propotion / aSum
 
-            print normailizedAllPropotion
+            #print normailizedAllPropotion
 
             sample_z = np.random.multinomial(1, normailizedAllPropotion, size=1)
 
-            z_index = np.where(sample_z == 1)[1][0] + 1
+            z_index = np.where(sample_z == 1)[1][0]
 
             # found new component
             if (z_index == self.K):
@@ -84,11 +88,11 @@ class dpmm_gibbs(object):
 
                 self.components = np.append(self.components, new_component)
 
-                print 'new cluster added'
+                print 'new component added'
 
             # add data to exist component
             else:
-                print(z_index)
+                #print(z_index)
                 #print(len(self.components))
                 self.components[z_index].ss = np.append(self.components[z_index].ss, x_i)
                 #print self.components[z_index].ss
@@ -97,6 +101,7 @@ class dpmm_gibbs(object):
 
         for component in self.components:
             print component.ss
+
 
 
     def sample_mu(self):
@@ -109,7 +114,7 @@ class dpmm_gibbs(object):
 
 
     def sample_alpha_0(self):
-        return ''
+        pass
 
 
 class mixture_component(object):

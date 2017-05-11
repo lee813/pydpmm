@@ -1,8 +1,8 @@
 from __future__ import division
 import numpy as np
-from numpy.random import random
 
-#fix var = 1
+#fix var = 1 standard normal distribution
+#with prior mu conjugate to a normal distribution
 class UnivariateGaussian(object):
 
 

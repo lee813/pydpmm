@@ -36,10 +36,11 @@ x = [4.0429277,-3.71686209,0.73144389,5.05700962,4.70910861,1.38603028,-0.871146
 #sample = gaussian.sample_discrete(loglikelihood)
 
 ##Direct Gibbs sampling for DPMM
+init_K = 5
 
-gibbs = dpmm_gibbs(alpha_0, x)
+gibbs = dpmm_gibbs(alpha_0,init_K,x)
 
-iter = 10
+iter = 20
 for i in range(1,iter):
     gibbs.sample_z()
     gibbs.sample_mu()
