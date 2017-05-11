@@ -1,7 +1,6 @@
-from distribution import UnivariateGaussian
+# Copyright (c) 2017, Danyang 'Frank' Li <danyangl@mtu.edu>
 from gibbs import dpmm_gibbs
 from matplotlib import pyplot as plt
-import numpy as np
 plt.style.use('ggplot')
 
 alpha_0 = 1
@@ -40,7 +39,7 @@ init_K = 5
 
 gibbs = dpmm_gibbs(alpha_0,init_K,x)
 
-iter = 20
+iter = 10
 for i in range(1,iter):
     gibbs.sample_z()
     gibbs.sample_mu()

@@ -1,3 +1,5 @@
+# Copyright (c) 2017, Danyang 'Frank' Li <danyangl@mtu.edu>
+
 from __future__ import division
 from distribution import UnivariateGaussian
 import numpy as np
@@ -36,27 +38,32 @@ class dpmm_gibbs(object):
         # STEP 2(d)
         # add z_i = new to form a new multi dist
 
-        # Calculate proportion for exist mixture component
-        # Clean mixture components
-        delete_idx = []
-        for idx,c in enumerate(self.components):
-            if(len(c.ss) == 0):
-                delete_idx.append(idx)
-                print('remove component')
-
-        for c in self.components:
-            c.ss = []
-
-        self.components = np.delete(self.components,delete_idx)
-        self.K = len(self.components)
-
-
+        for component in self.components:
+            print component.ss
 
          # Start sample aux indication variable z
         for idx, x_i in enumerate(self.x):
+
+
+
             proportion = np.array([])
             for k in range(0, self.K):
-                n_k = self.components[k].n_k_minus_i
+                # Calculate proportion for exist mixture component
+                # Clean mixture components
+                temp_ss = self.components[k].ss
+                ss_delete_idx = []
+                for idx,ss_i in enumerate(temp_ss):
+                    if(ss_i == x_i):
+                        ss_delete_idx.append(idx)
+                temp_ss = np.delete(temp_ss, ss_delete_idx)
+                self.components[k].ss = temp_ss
+                if (len(temp_ss) == 0):
+                    print('component deleted')
+                    self.components = np.delete(self.components, k)
+                    self.K = len(self.components)
+                    break
+
+                n_k = self.components[k].get_n_k_minus_i()
                 _proportion = (n_k / (self.n + self.alpha_0 - 1)) * self.components[k].distn.log_likelihood(x_i)
                 proportion = np.append(proportion, _proportion)
 
@@ -71,8 +78,6 @@ class dpmm_gibbs(object):
             aSum = sum(all_propotion)
 
             normailizedAllPropotion = all_propotion / aSum
-
-            #print normailizedAllPropotion
 
             sample_z = np.random.multinomial(1, normailizedAllPropotion, size=1)
 
@@ -97,11 +102,6 @@ class dpmm_gibbs(object):
                 self.components[z_index].ss = np.append(self.components[z_index].ss, x_i)
                 #print self.components[z_index].ss
 
-                # print sample_z
-
-        for component in self.components:
-            print component.ss
-
 
 
     def sample_mu(self):
@@ -123,4 +123,12 @@ class mixture_component(object):
         self.distn = distn
 
         self.n = len(ss)
-        self.n_k_minus_i = len(ss) - 1
+        if(self.n > 0):
+            self.n_k_minus_i = len(ss) - 1
+        else:
+            self.n_k_minus_i = 0
+
+    def get_n_k_minus_i(self):
+        return len(self.ss) - 1
+    def get_ss(self):
+        return self.ss

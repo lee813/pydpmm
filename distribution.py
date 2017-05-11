@@ -1,3 +1,4 @@
+# Copyright (c) 2017, Danyang 'Frank' Li <danyangl@mtu.edu>
 from __future__ import division
 import numpy as np
 
