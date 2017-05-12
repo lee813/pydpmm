@@ -17,6 +17,7 @@ class dpmm_gibbs(object):
         self.mu_0 = 1
         self.mu = np.ones(self.K)
         self.z = np.ones((len(self.x), 1))
+        self._lambda = 1
 
         #init ss
         ss_mtx = np.reshape(self.x, (5,4))
@@ -27,18 +28,21 @@ class dpmm_gibbs(object):
 
         self.n = len(self.x)
 
-    def sample_new_mu(self, x):
-        return np.random.normal(0.5 * x, 0.5, 1)
 
     def new_component_probability(self, x):
         # TODO check formula
-        return (1 / (2 * np.sqrt(np.pi))) * np.exp(-x ** 2 / 4)
+        return (1 / (2 * np.sqrt(np.pi))) * np.exp(- x**2 / 4)
+
+    def new_component_log_integral(self, x):
+        # TODO check formula
+        return np.log(2 * np.sqrt(np.pi)) - (x**2/4)
 
     def sample_z(self):
         # STEP 2(d)
         # add z_i = new to form a new multi dist
 
         for component in self.components:
+            print len(component.ss)
             print component.ss
 
          # Start sample aux indication variable z
@@ -67,13 +71,14 @@ class dpmm_gibbs(object):
                 _proportion = (n_k / (self.n + self.alpha_0 - 1)) * self.components[k].distn.log_likelihood(x_i)
                 proportion = np.append(proportion, _proportion)
 
-            pSum = sum(proportion)
+            new_proportion = (self.alpha_0 / (self.n + self.alpha_0 - 1)) * self.new_component_log_integral(x_i)
 
-            normailizedPropotion = proportion / pSum
+            all_propotion = np.append(proportion, new_proportion)
 
-            new_proportion = (self.alpha_0 / (self.n + self.alpha_0 - 1)) * self.new_component_probability(x_i)
+            print x_i
+            print 'new pro'
+            print new_proportion
 
-            all_propotion = np.append(normailizedPropotion, new_proportion)
 
             aSum = sum(all_propotion)
 
