@@ -42,7 +42,6 @@ class dpmm_gibbs(object):
         # add z_i = new to form a new multi dist
 
         for component in self.components:
-            print len(component.ss)
             print component.ss
 
          # Start sample aux indication variable z
@@ -68,21 +67,23 @@ class dpmm_gibbs(object):
                     break
 
                 n_k = self.components[k].get_n_k_minus_i()
-                _proportion = (n_k / (self.n + self.alpha_0 - 1)) * self.components[k].distn.log_likelihood(x_i)
+                #return exp
+                _proportion = (n_k / (self.n + self.alpha_0 - 1)) * np.exp(self.components[k].distn.log_likelihood(x_i))
                 proportion = np.append(proportion, _proportion)
 
-            new_proportion = (self.alpha_0 / (self.n + self.alpha_0 - 1)) * self.new_component_log_integral(x_i)
+            new_proportion = (self.alpha_0 / (self.n + self.alpha_0 - 1)) * self.new_component_probability(x_i)
 
             all_propotion = np.append(proportion, new_proportion)
 
-            print x_i
-            print 'new pro'
-            print new_proportion
+            # print x_i
+            # print 'new pro'
+            # print all_propotion
 
 
             aSum = sum(all_propotion)
 
             normailizedAllPropotion = all_propotion / aSum
+            #print normailizedAllPropotion
 
             sample_z = np.random.multinomial(1, normailizedAllPropotion, size=1)
 
@@ -91,7 +92,7 @@ class dpmm_gibbs(object):
             # found new component
             if (z_index == self.K):
                 self.K += 1
-
+                # sample new mu for new component
                 new_mu = np.random.normal(0.5 * x_i, 0.5, 1);
 
                 new_component = mixture_component(ss=[x_i], distn=UnivariateGaussian(mu=new_mu))
