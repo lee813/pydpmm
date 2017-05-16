@@ -41,9 +41,6 @@ class dpmm_gibbs(object):
         # STEP 2(d)
         # add z_i = new to form a new multi dist
 
-        for component in self.components:
-            print component.ss
-
          # Start sample aux indication variable z
         for idx, x_i in enumerate(self.x):
 
@@ -61,7 +58,7 @@ class dpmm_gibbs(object):
                 temp_ss = np.delete(temp_ss, ss_delete_idx)
                 self.components[k].ss = temp_ss
                 if (len(temp_ss) == 0):
-                    print('component deleted')
+                    #print('component deleted')
                     self.components = np.delete(self.components, k)
                     self.K = len(self.components)
                     break
@@ -99,16 +96,16 @@ class dpmm_gibbs(object):
 
                 self.components = np.append(self.components, new_component)
 
-                print 'new component added'
+                #print 'new component added'
 
             # add data to exist component
             else:
-                #print(z_index)
-                #print(len(self.components))
                 self.components[z_index].ss = np.append(self.components[z_index].ss, x_i)
                 #print self.components[z_index].ss
 
-
+        for component in self.components:
+            component.print_self()
+        print('alpha -> ' + str(self.alpha_0))
 
     def sample_mu(self):
 
@@ -116,11 +113,12 @@ class dpmm_gibbs(object):
             x_k = self.components[k].ss
             mu_k = np.random.normal((self.mu_0 + sum(x_k))/(1+len(x_k)), 1/(1 + len(x_k)), 1)
             self.components[k].distn.set_mu(mu=mu_k)
-            print('new mu -> ' + str(mu_k[0]))
+            #print('new mu -> ' + str(mu_k[0]))
 
-
+    #TODO Sample alpha
     def sample_alpha_0(self):
-        pass
+        self.alpha_0 = np.random.gamma(1,1,1)
+
 
 
 class mixture_component(object):
@@ -138,3 +136,6 @@ class mixture_component(object):
         return len(self.ss) - 1
     def get_ss(self):
         return self.ss
+    def print_self(self):
+        print(self.ss)
+        print('Mu: '+ str(self.distn.mu))

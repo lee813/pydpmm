@@ -39,7 +39,9 @@ init_K = 5
 
 gibbs = dpmm_gibbs(alpha_0,init_K,x)
 
-iter = 20
+iter = 50
 for i in range(1,iter):
+    print('Iter: '+ str(i))
     gibbs.sample_z()
     gibbs.sample_mu()
+    gibbs.sample_alpha_0()
