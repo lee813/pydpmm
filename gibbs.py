@@ -7,17 +7,22 @@ from scipy.stats import norm
 from numpy.random import random
 
 
-# fix var = 1
-class dpmm_gibbs(object):
+class dpmm_gibbs_base(object):
     def __init__(self, alpha_0=None, init_K=5, x=[]):
         self.alpha_0 = alpha_0
         self.x = x
         self.K = init_K
+        self._lambda = 1
+
+
+# fix var = 1
+class direct_dpmm_gibbs(dpmm_gibbs_base):
+    def __init__(self, alpha_0=None, init_K=5, x=[]):
+        super(direct_dpmm_gibbs, self).__init__(alpha_0, init_K, x)
 
         self.mu_0 = 1
         self.mu = np.ones(self.K)
         self.z = np.ones((len(self.x), 1))
-        self._lambda = 1
 
         #init ss
         ss_mtx = np.reshape(self.x, (5,4))
@@ -41,7 +46,7 @@ class dpmm_gibbs(object):
         # STEP 2(d)
         # add z_i = new to form a new multi dist
 
-         # Start sample aux indication variable z
+        # Start sample aux indication variable z
         for idx, x_i in enumerate(self.x):
 
 
@@ -65,6 +70,7 @@ class dpmm_gibbs(object):
 
                 n_k = self.components[k].get_n_k_minus_i()
                 #return exp
+                print(self.components[k].distn.log_likelihood(x_i))
                 _proportion = (n_k / (self.n + self.alpha_0 - 1)) * np.exp(self.components[k].distn.log_likelihood(x_i))
                 proportion = np.append(proportion, _proportion)
 
@@ -72,15 +78,7 @@ class dpmm_gibbs(object):
 
             all_propotion = np.append(proportion, new_proportion)
 
-            # print x_i
-            # print 'new pro'
-            # print all_propotion
-
-
-            aSum = sum(all_propotion)
-
-            normailizedAllPropotion = all_propotion / aSum
-            #print normailizedAllPropotion
+            normailizedAllPropotion = all_propotion / sum(all_propotion)
 
             sample_z = np.random.multinomial(1, normailizedAllPropotion, size=1)
 
@@ -115,9 +113,16 @@ class dpmm_gibbs(object):
             self.components[k].distn.set_mu(mu=mu_k)
             #print('new mu -> ' + str(mu_k[0]))
 
-    #TODO Sample alpha
+    #TODO Sample alpha with iter T
     def sample_alpha_0(self):
         self.alpha_0 = np.random.gamma(1,1,1)
+
+
+
+class collapsed_dpmm_gibbs(dpmm_gibbs_base):
+    def __init__(self, alpha_0=None, init_K=5, x=[]):
+        super(collapsed_dpmm_gibbs, self).__init__(alpha_0, init_K, x)
+
 
 
 

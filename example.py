@@ -1,5 +1,5 @@
 # Copyright (c) 2017, Danyang 'Frank' Li <danyangl@mtu.edu>
-from gibbs import dpmm_gibbs
+from gibbs import direct_dpmm_gibbs
 from matplotlib import pyplot as plt
 plt.style.use('ggplot')
 
@@ -37,7 +37,7 @@ x = [4.0429277,10.71686209,10.73144389,5.05700962,4.70910861,1.38603028,-12.8711
 ##Direct Gibbs sampling for DPMM
 init_K = 5
 
-gibbs = dpmm_gibbs(alpha_0,init_K,x)
+gibbs = direct_dpmm_gibbs(alpha_0,init_K,x)
 
 iter = 50
 for i in range(1,iter):
