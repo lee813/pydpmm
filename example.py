@@ -35,7 +35,7 @@ x = [4.0429277,10.71686209,10.73144389,5.05700962,4.70910861,1.38603028,-12.8711
 
 ##Direct Gibbs sampling for DPMM
 init_K = 5
-alpha_prior = {'a':1,'b':1}
+alpha_prior = {'a':1,'b':2}
 
 gibbs = direct_dpmm_gibbs(init_K,x,alpha_prior)
 

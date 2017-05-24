@@ -3,8 +3,7 @@
 from __future__ import division
 from distribution import UnivariateGaussian
 import numpy as np
-from scipy.stats import norm
-from numpy.random import random
+
 
 
 class dpmm_gibbs_base(object):
@@ -16,6 +15,7 @@ class dpmm_gibbs_base(object):
         self.alpha_0 = np.random.gamma(self.alpha_prior['a'],self.alpha_prior['b'])
 
 
+#TODO Add variance parameter
 # fix var = 1
 class direct_dpmm_gibbs(dpmm_gibbs_base):
     def __init__(self, init_K=5, x=[], alpha_prior=None):
@@ -117,7 +117,7 @@ class direct_dpmm_gibbs(dpmm_gibbs_base):
     def sample_alpha_0(self):
         #Escobar and West 1995
         eta = np.random.beta(self.alpha_0 + 1,self.n,1)
-        #Yeh HDP 2005
+        #Teh HDP 2005
         #construct the mixture model
         pi = self.n/self.alpha_0
         pi = pi/(1+pi)
@@ -126,7 +126,7 @@ class direct_dpmm_gibbs(dpmm_gibbs_base):
         self.alpha_0 = np.random.gamma(self.alpha_prior['a'] + self.K - s, 1/(self.alpha_prior['b'] - np.log(eta)), 1)
 
 
-
+#TODO add collapsed gibbs
 class collapsed_dpmm_gibbs(dpmm_gibbs_base):
     def __init__(self, alpha_0=None, init_K=5, x=[]):
         super(collapsed_dpmm_gibbs, self).__init__(alpha_0, init_K, x)
