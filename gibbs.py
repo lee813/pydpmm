@@ -8,17 +8,18 @@ from numpy.random import random
 
 
 class dpmm_gibbs_base(object):
-    def __init__(self, alpha_0=None, init_K=5, x=[]):
+    def __init__(self, alpha_0=None, init_K=5, x=[], alpha_prior=None):
         self.alpha_0 = alpha_0
         self.x = x
         self.K = init_K
         self._lambda = 1
+        self.alpha_prior = alpha_prior
 
 
 # fix var = 1
 class direct_dpmm_gibbs(dpmm_gibbs_base):
-    def __init__(self, alpha_0=None, init_K=5, x=[]):
-        super(direct_dpmm_gibbs, self).__init__(alpha_0, init_K, x)
+    def __init__(self, alpha_0=None, init_K=5, x=[], alpha_prior=None):
+        super(direct_dpmm_gibbs, self).__init__(alpha_0, init_K, x, alpha_prior)
 
         self.mu_0 = 1
         self.mu = np.ones(self.K)
@@ -70,7 +71,7 @@ class direct_dpmm_gibbs(dpmm_gibbs_base):
 
                 n_k = self.components[k].get_n_k_minus_i()
                 #return exp
-                print(self.components[k].distn.log_likelihood(x_i))
+                #print(self.components[k].distn.log_likelihood(x_i))
                 _proportion = (n_k / (self.n + self.alpha_0 - 1)) * np.exp(self.components[k].distn.log_likelihood(x_i))
                 proportion = np.append(proportion, _proportion)
 
@@ -113,9 +114,16 @@ class direct_dpmm_gibbs(dpmm_gibbs_base):
             self.components[k].distn.set_mu(mu=mu_k)
             #print('new mu -> ' + str(mu_k[0]))
 
-    #TODO Sample alpha with iter T
     def sample_alpha_0(self):
-        self.alpha_0 = np.random.gamma(1,1,1)
+        #Escobar and West 1995
+        eta = np.random.beta(self.alpha_0 + 1,self.n,1)
+        #Yeh HDP 2005
+        #construct the mixture model
+        pi = self.n/self.alpha_0
+        pi = pi/(1+pi)
+        s = np.random.binomial(1,pi,1)
+        #sample from a two gamma mixture models
+        self.alpha_0 = np.random.gamma(self.alpha_prior['a'] + self.K - s, 1/(self.alpha_prior['b'] - np.log(eta)), 1)
 
 
 
