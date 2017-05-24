@@ -8,18 +8,18 @@ from numpy.random import random
 
 
 class dpmm_gibbs_base(object):
-    def __init__(self, alpha_0=None, init_K=5, x=[], alpha_prior=None):
-        self.alpha_0 = alpha_0
+    def __init__(self, init_K=5, x=[], alpha_prior=None):
         self.x = x
         self.K = init_K
         self._lambda = 1
         self.alpha_prior = alpha_prior
+        self.alpha_0 = np.random.gamma(self.alpha_prior['a'],self.alpha_prior['b'])
 
 
 # fix var = 1
 class direct_dpmm_gibbs(dpmm_gibbs_base):
-    def __init__(self, alpha_0=None, init_K=5, x=[], alpha_prior=None):
-        super(direct_dpmm_gibbs, self).__init__(alpha_0, init_K, x, alpha_prior)
+    def __init__(self, init_K=5, x=[], alpha_prior=None):
+        super(direct_dpmm_gibbs, self).__init__(init_K, x, alpha_prior)
 
         self.mu_0 = 1
         self.mu = np.ones(self.K)

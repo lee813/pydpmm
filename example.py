@@ -3,7 +3,6 @@ from gibbs import direct_dpmm_gibbs
 from matplotlib import pyplot as plt
 plt.style.use('ggplot')
 
-alpha_0 = 1
 x = [4.0429277,10.71686209,10.73144389,5.05700962,4.70910861,1.38603028,-12.87114683,0.90842492,2.26485196,0.3287409, 1.85740593, -0.08981766,  0.11817958,  0.60973202,  1.88309994,
         1.47112954,  0.77061995,  1.24543065,  1.92506892,  0.7578275]
 
@@ -38,7 +37,7 @@ x = [4.0429277,10.71686209,10.73144389,5.05700962,4.70910861,1.38603028,-12.8711
 init_K = 5
 alpha_prior = {'a':1,'b':1}
 
-gibbs = direct_dpmm_gibbs(alpha_0,init_K,x,alpha_prior)
+gibbs = direct_dpmm_gibbs(init_K,x,alpha_prior)
 
 iter = 100
 for i in range(1,iter):
