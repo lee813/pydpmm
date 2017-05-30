@@ -1,5 +1,6 @@
 # Copyright (c) 2017, Danyang 'Frank' Li <danyangl@mtu.edu>
 from gibbs import direct_dpmm_gibbs
+from gibbs import collapsed_dpmm_gibbs
 from matplotlib import pyplot as plt
 plt.style.use('ggplot')
 
@@ -36,12 +37,16 @@ x = [4.0429277,10.71686209,10.73144389,5.05700962,4.70910861,1.38603028,-12.8711
 ##Direct Gibbs sampling for DPMM
 init_K = 5
 alpha_prior = {'a':1,'b':2}
+observation_prior = {'mu':0,'sigma':1}
 
-gibbs = direct_dpmm_gibbs(init_K,x,alpha_prior)
+# gibbs = direct_dpmm_gibbs(init_K,x,alpha_prior)
+#
+# iter = 100
+# for i in range(1,iter):
+#     print('Iter: '+ str(i))
+#     gibbs.sample_z()
+#     gibbs.sample_mu()
+#     gibbs.sample_alpha_0()
 
-iter = 100
-for i in range(1,iter):
-    print('Iter: '+ str(i))
-    gibbs.sample_z()
-    gibbs.sample_mu()
-    gibbs.sample_alpha_0()
+collapsed_gibbs = collapsed_dpmm_gibbs(init_K,x,alpha_prior,observation_prior)
+collapsed_gibbs.sample_z()
