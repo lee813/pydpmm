@@ -8,11 +8,26 @@ import numpy as np
 
 class dpmm_gibbs_base(object):
     def __init__(self, init_K=5, x=[], alpha_prior=None):
-        self.x = x
+        #Convert python array to numpy array
+        self.x = np.asarray(x)
         self.K = init_K
         self._lambda = 1
+
+        self.nn = np.ones(self.K)
         self.alpha_prior = alpha_prior
         self.alpha_0 = np.random.gamma(self.alpha_prior['a'],self.alpha_prior['b'])
+
+        # init zz randomly
+        self.zz = np.random.randint(init_K, size=len(self.x))
+        self.mu_0 = 1
+        self.mu = np.ones(self.K)
+        self.components = [mixture_component(ss=[], distn=UnivariateGaussian(mu=mu_i)) for mu_i in self.mu]
+
+        for idx, c in enumerate(self.components):
+            c.ss = self.x[self.zz == idx]
+            self.nn[idx] = len(c.ss)
+
+        self.n = len(self.x)
 
 
 #TODO Add variance parameter
@@ -20,19 +35,6 @@ class dpmm_gibbs_base(object):
 class direct_dpmm_gibbs(dpmm_gibbs_base):
     def __init__(self, init_K=5, x=[], alpha_prior=None):
         super(direct_dpmm_gibbs, self).__init__(init_K, x, alpha_prior)
-
-        self.mu_0 = 1
-        self.mu = np.ones(self.K)
-        self.z = np.ones((len(self.x), 1))
-
-        #init ss
-        ss_mtx = np.reshape(self.x, (5,4))
-
-        self.components = [mixture_component(ss=[], distn=UnivariateGaussian(mu=mu_i)) for mu_i in self.mu]
-        for idx,c in enumerate(self.components):
-            c.ss = ss_mtx[idx,:]
-
-        self.n = len(self.x)
 
 
     def new_component_probability(self, x):
@@ -49,29 +51,30 @@ class direct_dpmm_gibbs(dpmm_gibbs_base):
 
         # Start sample aux indication variable z
         for idx, x_i in enumerate(self.x):
-
+            kk = self.zz[idx]
+            temp_ss = self.components[kk].ss
+            ss_delete_idx = []
+            for idx, ss_i in enumerate(temp_ss):
+                if (ss_i == x_i):
+                    ss_delete_idx.append(idx)
+            temp_ss = np.delete(temp_ss, ss_delete_idx)
+            self.components[kk].ss = temp_ss
+            if (len(temp_ss) == 0):
+                # print('component deleted')
+                self.components = np.delete(self.components, kk)
+                self.K = len(self.components)
+                break
 
 
             proportion = np.array([])
             for k in range(0, self.K):
                 # Calculate proportion for exist mixture component
                 # Clean mixture components
-                temp_ss = self.components[k].ss
-                ss_delete_idx = []
-                for idx,ss_i in enumerate(temp_ss):
-                    if(ss_i == x_i):
-                        ss_delete_idx.append(idx)
-                temp_ss = np.delete(temp_ss, ss_delete_idx)
-                self.components[k].ss = temp_ss
-                if (len(temp_ss) == 0):
-                    #print('component deleted')
-                    self.components = np.delete(self.components, k)
-                    self.K = len(self.components)
-                    break
+
 
                 n_k = self.components[k].get_n_k_minus_i()
                 #return exp
-                #print(self.components[k].distn.log_likelihood(x_i))
+
                 _proportion = (n_k / (self.n + self.alpha_0 - 1)) * np.exp(self.components[k].distn.log_likelihood(x_i))
                 proportion = np.append(proportion, _proportion)
 
@@ -84,6 +87,7 @@ class direct_dpmm_gibbs(dpmm_gibbs_base):
             sample_z = np.random.multinomial(1, normailizedAllPropotion, size=1)
 
             z_index = np.where(sample_z == 1)[1][0]
+            self.zz[idx] = z_index
 
             # found new component
             if (z_index == self.K):
@@ -103,9 +107,10 @@ class direct_dpmm_gibbs(dpmm_gibbs_base):
                 self.components[z_index].ss = np.append(self.components[z_index].ss, x_i)
                 #print self.components[z_index].ss
 
-        for component in self.components:
-            component.print_self()
-        print('alpha -> ' + str(self.alpha_0))
+        # for component in self.components:
+        #     component.print_self()
+        # print('alpha -> ' + str(self.alpha_0))
+        print(self.zz)
 
     def sample_mu(self):
 
@@ -133,8 +138,25 @@ class collapsed_dpmm_gibbs(dpmm_gibbs_base):
         super(collapsed_dpmm_gibbs, self).__init__(init_K, x, alpha_prior)
         self.observation_prior = observation_prior
 
+        self.mu_0 = 1
+        self.mu = np.ones(self.K)
+
+        # init ss
+        ss_mtx = np.reshape(self.x, (5, 4))
+
+        self.components = [mixture_component(ss=[], distn=UnivariateGaussian(mu=mu_i)) for mu_i in self.mu]
+        for idx, c in enumerate(self.components):
+            c.ss = ss_mtx[idx, :]
+
+        self.n = len(self.x)
+
     def sample_z(self):
         for idx, x_i in enumerate(self.x):
+
+
+
+            pp = np.log()
+
             proportion = np.array([])
             for k in range(0, self.K):
                 # Calculate proportion for exist mixture component
@@ -176,11 +198,14 @@ class mixture_component(object):
         self.ss = ss
         self.distn = distn
 
+
         self.n = len(ss)
         if(self.n > 0):
             self.n_k_minus_i = len(ss) - 1
         else:
             self.n_k_minus_i = 0
+    def set_zz(self):
+        pass
 
     def get_n_k_minus_i(self):
         return len(self.ss) - 1
