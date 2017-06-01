@@ -49,6 +49,7 @@ observation_prior = {'mu':0,'sigma':1}
 #     gibbs.sample_alpha_0()
 
 collapsed_gibbs = collapsed_dpmm_gibbs(init_K,x,alpha_prior,observation_prior)
-iter = 2
+iter = 10
 for i in range(0,iter):
     collapsed_gibbs.sample_z()
+    #collapsed_gibbs.sample_alpha_0()

@@ -142,53 +142,78 @@ class collapsed_dpmm_gibbs(dpmm_gibbs_base):
 
         self.components = np.append(self.components, new_component)
 
-
-
         self.n = len(self.x)
 
     def sample_z(self):
         for idx, x_i in enumerate(self.x):
-            # Clean mixture components
+
             kk = self.zz[idx]
-            temp_ss = self.components[kk].ss
-            ss_delete_idx = []
-            for idx, ss_i in enumerate(temp_ss):
-                if (ss_i == x_i):
-                    ss_delete_idx.append(idx)
-            temp_ss = np.delete(temp_ss, ss_delete_idx)
+            # Clean mixture components
+            temp_zz, = np.where(self.zz == kk)
+            temp_zz = np.setdiff1d(temp_zz,np.array([idx]))
+            self.nn[kk] -= 1
+            temp_ss = self.x[temp_zz]
             self.components[kk].ss = temp_ss
             if (len(temp_ss) == 0):
-                # print('component deleted')
+                print('component deleted')
                 self.components = np.delete(self.components, kk)
                 self.K = len(self.components)
-                break
+                self.nn = np.delete(self.nn,kk)
+                zz_to_minus_1 = np.where(self.zz > kk)
+                self.zz[zz_to_minus_1] -= 1
 
-
-
-            pp = np.log( np.append(self.nn, self.alpha_0))
+            print np.append(self.nn, self.alpha_0)
+            pp = np.log(np.append(self.nn, self.alpha_0))
 
             for k in range(0, self.K):
                 pp[k] = pp[k] + self.log_predictive(self.components[k],x_i)
                 #print(self.log_predictive(self.components[k], x_i))
             pp = np.exp(pp - np.max(pp))
-            pp = pp/np.sum(pp)
             print pp
+            pp = pp/np.sum(pp)
+            #print pp
             sample_z = np.random.multinomial(1, pp, size=1)
 
             z_index = np.where(sample_z == 1)[1][0]
+            self.zz[idx] = z_index
 
-            print z_index
+            #print z_index
             if(z_index == len(self.components) - 1):
-                print 'new component'
+                print('component added')
+                new_mu = np.random.normal(0.5 * x_i, 0.5, 1);
 
+                new_component = mixture_component(ss=[x_i], distn=UnivariateGaussian(mu=new_mu))
 
-        pass
+                self.components = np.append(self.components, new_component)
+                self.K = len(self.components)
+                self.nn = np.append(self.nn, 1)
+            else:
+                self.components[z_index].ss = np.append(self.components[z_index].ss, x_i)
+                self.nn[z_index] += 1
+
+        # print '----Summary----'
+        # print self.zz
+        # print self.nn
+        for component in self.components:
+            component.print_self()
+
+    def sample_alpha_0(self):
+        #Escobar and West 1995
+        eta = np.random.beta(self.alpha_0 + 1,self.n,1)
+        #Teh HDP 2005
+        #construct the mixture model
+        pi = self.n/self.alpha_0
+        pi = pi/(1+pi)
+        s = np.random.binomial(1,pi,1)
+        #sample from a two gamma mixture models
+        self.alpha_0 = np.random.gamma(self.alpha_prior['a'] + self.K - s, 1/(self.alpha_prior['b'] - np.log(eta)), 1)
+        print self.alpha_0
 
     def log_predictive(self,component, x_i):
         ll = self.epsilon_log_univariate_normal(self.observation_prior['mu'] + np.sum(component.get_ss()) + x_i ,\
                                             self.observation_prior['sigma'] + component.get_n_k_minus_i() + 1, x_i) - \
              self.epsilon_log_univariate_normal(self.observation_prior['mu'] + np.sum(component.get_ss()), \
-                                            self.observation_prior['sigma'] + component.get_n_k_minus_i(), x_i)
+                                            self.observation_prior['sigma'] + component.get_n_k_minus_i(), x_i) - x_i**2
         return ll
 
 
