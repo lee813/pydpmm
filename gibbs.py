@@ -71,7 +71,6 @@ class direct_dpmm_gibbs(dpmm_gibbs_base):
                 # Calculate proportion for exist mixture component
                 # Clean mixture components
 
-
                 n_k = self.components[k].get_n_k_minus_i()
                 #return exp
 
@@ -132,64 +131,72 @@ class direct_dpmm_gibbs(dpmm_gibbs_base):
         self.alpha_0 = np.random.gamma(self.alpha_prior['a'] + self.K - s, 1/(self.alpha_prior['b'] - np.log(eta)), 1)
 
 
-#TODO add collapsed gibbs
 class collapsed_dpmm_gibbs(dpmm_gibbs_base):
     def __init__(self, init_K=5, x=[], alpha_prior = None, observation_prior=None,):
         super(collapsed_dpmm_gibbs, self).__init__(init_K, x, alpha_prior)
         self.observation_prior = observation_prior
 
-        self.mu_0 = 1
-        self.mu = np.ones(self.K)
+        new_mu = np.random.normal(self.observation_prior['mu'], self.observation_prior['sigma'], 1);
 
-        # init ss
-        ss_mtx = np.reshape(self.x, (5, 4))
+        new_component = mixture_component(ss=[], distn=UnivariateGaussian(mu=new_mu))
 
-        self.components = [mixture_component(ss=[], distn=UnivariateGaussian(mu=mu_i)) for mu_i in self.mu]
-        for idx, c in enumerate(self.components):
-            c.ss = ss_mtx[idx, :]
+        self.components = np.append(self.components, new_component)
+
+
 
         self.n = len(self.x)
 
     def sample_z(self):
         for idx, x_i in enumerate(self.x):
+            # Clean mixture components
+            kk = self.zz[idx]
+            temp_ss = self.components[kk].ss
+            ss_delete_idx = []
+            for idx, ss_i in enumerate(temp_ss):
+                if (ss_i == x_i):
+                    ss_delete_idx.append(idx)
+            temp_ss = np.delete(temp_ss, ss_delete_idx)
+            self.components[kk].ss = temp_ss
+            if (len(temp_ss) == 0):
+                # print('component deleted')
+                self.components = np.delete(self.components, kk)
+                self.K = len(self.components)
+                break
 
 
 
-            pp = np.log()
+            pp = np.log( np.append(self.nn, self.alpha_0))
 
-            proportion = np.array([])
             for k in range(0, self.K):
-                # Calculate proportion for exist mixture component
-                # Clean mixture components
-                temp_ss = self.components[k].ss
-                ss_delete_idx = []
-                for idx, ss_i in enumerate(temp_ss):
-                    if (ss_i == x_i):
-                        ss_delete_idx.append(idx)
-                temp_ss = np.delete(temp_ss, ss_delete_idx)
-                self.components[k].ss = temp_ss
-                if (len(temp_ss) == 0):
-                    # print('component deleted')
-                    self.components = np.delete(self.components, k)
-                    self.K = len(self.components)
-                    break
+                pp[k] = pp[k] + self.log_predictive(self.components[k],x_i)
+                #print(self.log_predictive(self.components[k], x_i))
+            pp = np.exp(pp - np.max(pp))
+            pp = pp/np.sum(pp)
+            print pp
+            sample_z = np.random.multinomial(1, pp, size=1)
 
-                print(self.log_predictive(self.components[k],x_i))
+            z_index = np.where(sample_z == 1)[1][0]
+
+            print z_index
+            if(z_index == len(self.components) - 1):
+                print 'new component'
+
 
         pass
 
     def log_predictive(self,component, x_i):
-        ll = self.epsilon_univariate_normal(self.observation_prior['mu'] + np.sum(component.get_ss()) + x_i ,\
+        ll = self.epsilon_log_univariate_normal(self.observation_prior['mu'] + np.sum(component.get_ss()) + x_i ,\
                                             self.observation_prior['sigma'] + component.get_n_k_minus_i() + 1, x_i) - \
-             self.epsilon_univariate_normal(self.observation_prior['mu'] + np.sum(component.get_ss()), \
+             self.epsilon_log_univariate_normal(self.observation_prior['mu'] + np.sum(component.get_ss()), \
                                             self.observation_prior['sigma'] + component.get_n_k_minus_i(), x_i)
         return ll
 
 
 
 
-    def epsilon_univariate_normal(self, mu, sigma, xi):
-        return (1/(np.sqrt(2*np.pi*sigma**2)))*np.exp(-(xi-mu)/(2*sigma**2))
+    def epsilon_log_univariate_normal(self, mu, sigma, x_i):
+        return  -(x_i-mu)/(2*sigma**2) + np.log(1/(np.sqrt(2*np.pi*sigma**2)))
+        #return (1/(np.sqrt(2*np.pi*sigma**2)))*np.exp(-(x_i-mu)/(2*sigma**2))
 
 
 
@@ -208,7 +215,11 @@ class mixture_component(object):
         pass
 
     def get_n_k_minus_i(self):
-        return len(self.ss) - 1
+        if (self.n > 0):
+            self.n_k_minus_i = len(self.ss) - 1
+        else:
+            self.n_k_minus_i = 0
+        return self.n_k_minus_i
     def get_ss(self):
         return self.ss
     def get_ss_expect_xi(self):
