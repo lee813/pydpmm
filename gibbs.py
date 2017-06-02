@@ -11,11 +11,11 @@ class dpmm_gibbs_base(object):
         #Convert python array to numpy array
         self.x = np.asarray(x)
         self.K = init_K
-        self._lambda = 1
 
         self.nn = np.ones(self.K)
         self.alpha_prior = alpha_prior
-        self.alpha_0 = np.random.gamma(self.alpha_prior['a'],self.alpha_prior['b'])
+        self.alpha_0 = 1
+            #np.random.gamma(self.alpha_prior['a'],self.alpha_prior['b'])
 
         # init zz randomly
         self.zz = np.random.randint(init_K, size=len(self.x))
@@ -136,13 +136,13 @@ class collapsed_dpmm_gibbs(dpmm_gibbs_base):
         super(collapsed_dpmm_gibbs, self).__init__(init_K, x, alpha_prior)
         self.observation_prior = observation_prior
 
+        #add a new empty component
         new_mu = np.random.normal(self.observation_prior['mu'], self.observation_prior['sigma'], 1);
-
         new_component = mixture_component(ss=[], distn=UnivariateGaussian(mu=new_mu))
-
         self.components = np.append(self.components, new_component)
 
-        self.n = len(self.x)
+        #print (UnivariateGaussian.epsilon_log_univariate_normal(self,-12,2) - UnivariateGaussian.epsilon_log_univariate_normal(self,1,1))
+
 
     def sample_z(self):
         for idx, x_i in enumerate(self.x):
@@ -150,13 +150,18 @@ class collapsed_dpmm_gibbs(dpmm_gibbs_base):
             kk = self.zz[idx]
             # Clean mixture components
             temp_zz, = np.where(self.zz == kk)
+            # print('----')
+            # print len(self.components[kk].ss)
             temp_zz = np.setdiff1d(temp_zz,np.array([idx]))
             self.nn[kk] -= 1
             temp_ss = self.x[temp_zz]
+            #print len(temp_ss)
             self.components[kk].ss = temp_ss
             if (len(temp_ss) == 0):
-                print('component deleted')
+                #print('component deleted')
+                #print(len(self.components))
                 self.components = np.delete(self.components, kk)
+                #print(len(self.components))
                 self.K = len(self.components)
                 self.nn = np.delete(self.nn,kk)
                 zz_to_minus_1 = np.where(self.zz > kk)
@@ -166,10 +171,12 @@ class collapsed_dpmm_gibbs(dpmm_gibbs_base):
 
             for k in range(0, self.K):
                 pp[k] = pp[k] + self.log_predictive(self.components[k],x_i)
-
+                print(self.log_predictive(self.components[k],x_i))
             pp = np.exp(pp - np.max(pp))
             pp = pp/np.sum(pp)
             sample_z = np.random.multinomial(1, pp, size=1)
+            print x_i
+
 
             z_index = np.where(sample_z == 1)[1][0]
             self.zz[idx] = z_index
@@ -188,8 +195,8 @@ class collapsed_dpmm_gibbs(dpmm_gibbs_base):
                 self.nn[z_index] += 1
 
         print '----Summary----'
-        print self.zz
-        print self.nn
+        # print self.zz
+        # print self.nn
         # for component in self.components:
         #     component.print_self()
 
@@ -207,17 +214,10 @@ class collapsed_dpmm_gibbs(dpmm_gibbs_base):
 
     def log_predictive(self,component, x_i):
         ll = UnivariateGaussian.epsilon_log_univariate_normal(self, self.observation_prior['mu'] + np.sum(component.get_ss()) + x_i ,\
-                                            self.observation_prior['sigma'] + component.get_n_k_minus_i() + 1, x_i) - \
+                                            self.observation_prior['sigma'] + component.get_n_k_minus_i() + 1) - \
              UnivariateGaussian.epsilon_log_univariate_normal(self, self.observation_prior['mu'] + np.sum(component.get_ss()), \
-                                            self.observation_prior['sigma'] + component.get_n_k_minus_i(), x_i)
+                                            self.observation_prior['sigma'] + component.get_n_k_minus_i())
         return ll
-
-
-
-
-    def epsilon_log_univariate_normal(self, mu, sigma, x_i):
-        return  -(x_i-mu)/(2*sigma**2) + np.log(1/(np.sqrt(2*np.pi*sigma**2)))
-        #return (1/(np.sqrt(2*np.pi*sigma**2)))*np.exp(-(x_i-mu)/(2*sigma**2))
 
 
 
@@ -226,14 +226,10 @@ class mixture_component(object):
         self.ss = ss
         self.distn = distn
 
-
-        self.n = len(ss)
-        if(self.n > 0):
+        if(len(ss)> 0):
             self.n_k_minus_i = len(ss) - 1
         else:
             self.n_k_minus_i = 0
-    def set_zz(self):
-        pass
 
     def get_n_k_minus_i(self):
         if (len(self.ss) > 1):
@@ -243,8 +239,7 @@ class mixture_component(object):
         return self.n_k_minus_i
     def get_ss(self):
         return self.ss
-    def get_ss_expect_xi(self):
-        pass
+
     def print_self(self):
         print(self.ss)
         print('Mu: '+ str(self.distn.mu))

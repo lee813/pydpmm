@@ -39,17 +39,17 @@ init_K = 5
 alpha_prior = {'a':1,'b':2}
 observation_prior = {'mu':0,'sigma':10}
 
-gibbs = direct_dpmm_gibbs(init_K,x,alpha_prior)
-
-iter = 50
-for i in range(0,iter):
-    print('Iter: '+ str(i))
-    gibbs.sample_z()
-    gibbs.sample_mu()
-    gibbs.sample_alpha_0()
-
-# collapsed_gibbs = collapsed_dpmm_gibbs(init_K,x,alpha_prior,observation_prior)
+# gibbs = direct_dpmm_gibbs(init_K,x,alpha_prior)
+#
 # iter = 50
 # for i in range(0,iter):
-#     collapsed_gibbs.sample_z()
-#     #collapsed_gibbs.sample_alpha_0()
+#     print('Iter: '+ str(i))
+#     gibbs.sample_z()
+#     gibbs.sample_mu()
+#     gibbs.sample_alpha_0()
+
+collapsed_gibbs = collapsed_dpmm_gibbs(init_K,x,alpha_prior,observation_prior)
+iter = 50
+for i in range(0,iter):
+    collapsed_gibbs.sample_z()
+    collapsed_gibbs.sample_alpha_0()
