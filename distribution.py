@@ -24,4 +24,8 @@ class UnivariateGaussian(object):
         x = np.reshape(x, (-1, 1))
         return (-0.5 * (x - self.mu) ** 2 - np.log(2 * np.pi )).ravel()
 
+    @staticmethod
+    def epsilon_log_univariate_normal(self, mu, sigma, x_i):
+        return  -(x_i-mu)/(2*sigma**2) + np.log(1/(np.sqrt(2*np.pi*sigma**2)))
+
 

@@ -52,28 +52,27 @@ class direct_dpmm_gibbs(dpmm_gibbs_base):
         # Start sample aux indication variable z
         for idx, x_i in enumerate(self.x):
             kk = self.zz[idx]
-            temp_ss = self.components[kk].ss
-            ss_delete_idx = []
-            for idx, ss_i in enumerate(temp_ss):
-                if (ss_i == x_i):
-                    ss_delete_idx.append(idx)
-            temp_ss = np.delete(temp_ss, ss_delete_idx)
+            # Clean mixture components
+            temp_zz, = np.where(self.zz == kk)
+            temp_zz = np.setdiff1d(temp_zz, np.array([idx]))
+            self.nn[kk] -= 1
+            temp_ss = self.x[temp_zz]
             self.components[kk].ss = temp_ss
             if (len(temp_ss) == 0):
-                # print('component deleted')
+                #print('component deleted')
                 self.components = np.delete(self.components, kk)
                 self.K = len(self.components)
-                break
-
+                self.nn = np.delete(self.nn, kk)
+                zz_to_minus_1 = np.where(self.zz > kk)
+                self.zz[zz_to_minus_1] -= 1
 
             proportion = np.array([])
             for k in range(0, self.K):
                 # Calculate proportion for exist mixture component
                 # Clean mixture components
 
-                n_k = self.components[k].get_n_k_minus_i()
+                n_k = self.nn[k]
                 #return exp
-
                 _proportion = (n_k / (self.n + self.alpha_0 - 1)) * np.exp(self.components[k].distn.log_likelihood(x_i))
                 proportion = np.append(proportion, _proportion)
 
@@ -86,6 +85,7 @@ class direct_dpmm_gibbs(dpmm_gibbs_base):
             sample_z = np.random.multinomial(1, normailizedAllPropotion, size=1)
 
             z_index = np.where(sample_z == 1)[1][0]
+
             self.zz[idx] = z_index
 
             # found new component
@@ -98,18 +98,18 @@ class direct_dpmm_gibbs(dpmm_gibbs_base):
                 new_component = mixture_component(ss=[x_i], distn=UnivariateGaussian(mu=new_mu))
 
                 self.components = np.append(self.components, new_component)
+                self.nn = np.append(self.nn, 1)
 
                 #print 'new component added'
 
             # add data to exist component
             else:
                 self.components[z_index].ss = np.append(self.components[z_index].ss, x_i)
-                #print self.components[z_index].ss
+                self.nn[z_index] += 1
 
-        # for component in self.components:
-        #     component.print_self()
-        # print('alpha -> ' + str(self.alpha_0))
-        print(self.zz)
+        for component in self.components:
+            component.print_self()
+        print('alpha -> ' + str(self.alpha_0))
 
     def sample_mu(self):
 
@@ -162,22 +162,18 @@ class collapsed_dpmm_gibbs(dpmm_gibbs_base):
                 zz_to_minus_1 = np.where(self.zz > kk)
                 self.zz[zz_to_minus_1] -= 1
 
-            print np.append(self.nn, self.alpha_0)
             pp = np.log(np.append(self.nn, self.alpha_0))
 
             for k in range(0, self.K):
                 pp[k] = pp[k] + self.log_predictive(self.components[k],x_i)
-                #print(self.log_predictive(self.components[k], x_i))
+
             pp = np.exp(pp - np.max(pp))
-            print pp
             pp = pp/np.sum(pp)
-            #print pp
             sample_z = np.random.multinomial(1, pp, size=1)
 
             z_index = np.where(sample_z == 1)[1][0]
             self.zz[idx] = z_index
 
-            #print z_index
             if(z_index == len(self.components) - 1):
                 print('component added')
                 new_mu = np.random.normal(0.5 * x_i, 0.5, 1);
@@ -191,11 +187,11 @@ class collapsed_dpmm_gibbs(dpmm_gibbs_base):
                 self.components[z_index].ss = np.append(self.components[z_index].ss, x_i)
                 self.nn[z_index] += 1
 
-        # print '----Summary----'
-        # print self.zz
-        # print self.nn
-        for component in self.components:
-            component.print_self()
+        print '----Summary----'
+        print self.zz
+        print self.nn
+        # for component in self.components:
+        #     component.print_self()
 
     def sample_alpha_0(self):
         #Escobar and West 1995
@@ -210,10 +206,10 @@ class collapsed_dpmm_gibbs(dpmm_gibbs_base):
         print self.alpha_0
 
     def log_predictive(self,component, x_i):
-        ll = self.epsilon_log_univariate_normal(self.observation_prior['mu'] + np.sum(component.get_ss()) + x_i ,\
+        ll = UnivariateGaussian.epsilon_log_univariate_normal(self, self.observation_prior['mu'] + np.sum(component.get_ss()) + x_i ,\
                                             self.observation_prior['sigma'] + component.get_n_k_minus_i() + 1, x_i) - \
-             self.epsilon_log_univariate_normal(self.observation_prior['mu'] + np.sum(component.get_ss()), \
-                                            self.observation_prior['sigma'] + component.get_n_k_minus_i(), x_i) - x_i**2
+             UnivariateGaussian.epsilon_log_univariate_normal(self, self.observation_prior['mu'] + np.sum(component.get_ss()), \
+                                            self.observation_prior['sigma'] + component.get_n_k_minus_i(), x_i)
         return ll
 
 
@@ -240,7 +236,7 @@ class mixture_component(object):
         pass
 
     def get_n_k_minus_i(self):
-        if (self.n > 0):
+        if (len(self.ss) > 1):
             self.n_k_minus_i = len(self.ss) - 1
         else:
             self.n_k_minus_i = 0
